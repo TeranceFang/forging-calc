@@ -1,2 +1,0 @@
-# forging-calc
-Forging Predict

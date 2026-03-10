@@ -1,0 +1,111 @@
+# forging-calc
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高科大模具工程 - 鍛造力解析系統</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { padding: 20px; background: #f4f7f6; }
+        .container { max-width: 900px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { border-bottom: 2px solid #9b4dca; margin-bottom: 20px; }
+        .input-section { margin-bottom: 20px; }
+        .chart-container { position: relative; height:300px; width:100%; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>鍛造力切片法預測系統</h2>
+        <p>助理工程師數據驗證工具 (平板/GitHub 託管版)</p>
+    </div>
+
+    <div class="row input-section">
+        <div class="column">
+            <label>初始直徑 D0 (mm)</label>
+            <input type="number" id="d0" value="20">
+            <label>初始高度 H0 (mm)</label>
+            <input type="number" id="h0" value="30">
+        </div>
+        <div class="column">
+            <label>最終高度 Hf (mm)</label>
+            <input type="number" id="hf" value="15">
+            <label>摩擦因數 m</label>
+            <input type="number" id="m" value="0.2" step="0.1">
+        </div>
+        <div class="column">
+            <label>強度係數 K (MPa)</label>
+            <input type="number" id="k" value="500">
+            <label>硬化指數 n</label>
+            <input type="number" id="n" value="0.2">
+        </div>
+    </div>
+
+    <button class="button" onclick="runSimulation()">執行解析計算並繪圖</button>
+
+    <div class="row">
+        <div class="column">
+            <h4>最大鍛造力: <span id="maxForce" style="color:#d93025">--</span> kN</h4>
+            <div class="chart-container">
+                <canvas id="forceChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let myChart;
+
+    function runSimulation() {
+        const d0 = +document.getElementById('d0').value, h0 = +document.getElementById('h0').value;
+        const hf = +document.getElementById('hf').value, m = +document.getElementById('m').value;
+        const k = +document.getElementById('k').value, n = +document.getElementById('n').value;
+
+        let labels = [], data = [];
+        let finalForce = 0;
+
+        // 從 H0 到 Hf 進行分段計算 (模擬行程)
+        for (let h = h0; h >= hf; h -= (h0 - hf) / 10) {
+            const epsilon = Math.log(h0 / h);
+            const sigmaF = k * Math.pow(epsilon || 0.001, n);
+            const df = d0 * Math.sqrt(h0 / h);
+            const areaF = (Math.PI / 4) * Math.pow(df, 2);
+            
+            // 切片法公式
+            const force = (sigmaF * (1 + (m * df) / (3 * Math.sqrt(3) * h)) * areaF) / 1000;
+            
+            labels.push((h0 - h).toFixed(1));
+            data.push(force.toFixed(2));
+            finalForce = force;
+        }
+
+        document.getElementById('maxForce').innerText = finalForce.toFixed(2);
+        updateChart(labels, data);
+    }
+
+    function updateChart(labels, data) {
+        const ctx = document.getElementById('forceChart').getContext('2d');
+        if (myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '鍛造力 (kN) vs 行程 (mm)',
+                    data: data,
+                    borderColor: '#9b4dca',
+                    backgroundColor: 'rgba(155, 77, 202, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+</script>
+
+</body>
+</html>
